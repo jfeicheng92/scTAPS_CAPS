@@ -18,7 +18,8 @@ picard : "picard/2.23.0-Java-11"
 samtools : "samtools/1.8-gcc5.4.0"
 python: "Python/3.7.4-GCCcore-8.3.0"
 
-SCTAPS_SMPS_REF: "/gpfs3/well/ludwig/users/ebu571/14Jul2022_2022_100cycles/resource/caps_mm9_lambda.fa"
+#SCTAPS_SMPS_REF: "/gpfs3/well/ludwig/users/ebu571/14Jul2022_2022_100cycles/resource/caps_mm9_lambda.fa"
+SCTAPS_SMPS_REF: "/gpfs3/well/ludwig/users/cfo155/scTAPS_CAPS/mESC_update/resource/caps_mm9_lambda.fa"
 SCCAPS_SMPS: [
 "C204_N701_i7_10_rev_N502_i5_1_rev",
 "C204_N701_i7_10_rev_N502_i5_2_rev",

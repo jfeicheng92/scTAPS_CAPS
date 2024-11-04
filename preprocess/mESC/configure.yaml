@@ -1,6 +1,9 @@
 methydackel: "/gpfs3/well/ludwig/users/cfo155/miniconda3/bin/MethylDackel"
 fastp: "/gpfs2/well/ludwig/users/cfo155/miniconda2/bin/fastp"
 mbiasplot: "/gpfs2/well/ludwig/users/cfo155/02Apr2022/code/mbias_plot.r"
+blacklist: "/gpfs3/well/ludwig/users/cfo155/scTAPS_CAPS/mouse_neuron/resource/mm9-blacklist.bed.gz"
+cgpos: "/gpfs3/well/ludwig/users/cfo155/scTAPS_CAPS/mouse_neuron/resource/mm9_genome.cg.blacklist_removed.bed"
+bins: "/gpfs3/well/ludwig/users/cfo155/scTAPS_CAPS/mouse_neuron/resource/genome_bin1m.bed"
 
 bwa : "BWA/0.7.17-GCC-8.3.0"
 fastqc: "FastQC/0.11.9-Java-11"

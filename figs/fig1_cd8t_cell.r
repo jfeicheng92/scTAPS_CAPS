@@ -10,7 +10,7 @@ library(viridis)
 library(data.table)
 library(tidyr)
 library(corrplot)
-setwd("/Users/chengjingfei/Desktop/fig1/")
+setwd("/users/ludwig/cfo155/cfo155/scTAPS_CAPS/human_immune_cells/t_cell_update/stats")
 #### 1. plot QC ####
 qc <- read.csv("all_stats.new.info",header=TRUE)
 exclude_cells <- qc[qc$proper_nmap<500000|qc$proper_nmap>3000000,1] # exclude sample by abnormal proper_nmap reads
@@ -92,32 +92,46 @@ get_upper_tri <- function(CorMat){
   return(CorMat)
 }
 
-qc[order(qc$nclean,decreasing = TRUE),] %>%head()
+selcells <- qc[order(qc$nclean,decreasing = TRUE),1] %>%head(3)
 
 cov_min <- 50
 cov_max <- 30000
 dat <- data.frame()
-for(i in list.files(pattern="[c,C]*bin*")){
-  temp <- fread(i) %>% as.data.frame()
-  temp$ratio <- temp[,4]/temp[,5]
-  colnames(temp)[1:3] <- c("chr","start","end")
-  temp <- temp[temp[,5] <cov_max & temp[,5]>cov_min,]
-  temp$smp <- i
-  dat <- rbind(dat,temp[,c(1:3,6:7)])
+selsmp <- c(paste0(selcells,".CpG"),"C183_bulk_CpG","cd8_tcells_merge_CpG")
+cor_mat <- data.frame()
+for(i in selsmp){
+  for(j in selsmp){
+    temp1 <- fread(paste0("../meth/",i,".bin_100k.bed")) %>% as.data.frame()
+    temp1$ratio <- temp1[,4]/temp1[,5]
+    temp2 <- fread(paste0("../meth/",j,".bin_100k.bed")) %>% as.data.frame()
+    temp2$ratio <- temp2[,4]/temp2[,5]
+    colnames(temp1)[1:3] <- c("chr","start","end")
+    temp1 <- temp1[temp1[,5] <cov_max & temp1[,5]>cov_min,]
+    colnames(temp2)[1:3] <- c("chr","start","end")
+    temp2 <- temp2[temp2[,5] <cov_max & temp2[,5]>cov_min,]
+    temp <- merge(temp1,temp2, by=c("chr","start","end"))
+    cor_mat <- rbind(cor_mat,c(i,j,cor(temp[,c("ratio.x","ratio.y")])[2,1]))
+  }
 }
-dat_w <- dat %>%
+colnames(cor_mat) <- c("smp1","smp2","cor")
+cor_mat <- as.data.frame(cor_mat)
+cor_mat$cor <- as.character(cor_mat$cor) %>% as.numeric()
+dat_w <- cor_mat %>%
   pivot_wider(
-  names_from = "smp",
-  values_from = c("ratio"),
-  names_sep = "_"
-)
-dat_w <- dat_w[,c(1,2,3,8,4,5,6,7)]
-dat_w <- dat_w[complete.cases(dat_w),]
-nrow(dat_w)/29343
-cor_caps1 <- get_upper_tri(cor(dat_w[,-c(1:3)]))
-meltNum <- melt(cor_caps1, na.rm = T)
+    names_from = "smp2",
+    values_from = c("cor"),
+    names_sep = "_"
+  ) %>% as.data.frame()
+rownames(dat_w) <- dat_w$smp1;dat_w$smp1 <- NULL
+
+cor_caps1 <- get_upper_tri(dat_w)
+cor_caps1$smp1 <- rownames(cor_caps1)
+cor_caps1 <- cor_caps1[,c(6,1:5)]
+meltNum <- melt(cor_caps1[,c(6,1:5)] , na.rm = T)
 meltNum$value <- as.numeric(meltNum$value)
-p <- ggplot(meltNum, aes(x = Var1, y = Var2, fill = value)) + geom_tile()+coord_fixed()+
+meltNum$smp1 <- factor(meltNum$smp1, levels=selsmp)
+meltNum$variable <- factor(meltNum$variable, levels=selsmp)
+p <- ggplot(meltNum, aes(x = smp1, y = variable, fill = value)) + geom_tile()+coord_fixed()+
   geom_text(aes(label = round(as.numeric(value),2)), color = "black")+  
   scale_fill_gradient(low = "white", high = "#B2182B", limit = c(0,1), name = "Pearson\nCorrelation") + 
   theme(plot.title = element_text(hjust = 0.5, face = "bold"),
@@ -125,10 +139,30 @@ p <- ggplot(meltNum, aes(x = Var1, y = Var2, fill = value)) + geom_tile()+coord_
         panel.grid.minor = element_blank(),
         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
   theme(panel.background = element_blank(), panel.border = element_blank())
-ggsave("heatmap.correlation_sc_taps.pdf", p,width=10, height=10)
-ggsave("heatmap.correlation_sc_taps.png", p,width=10, height=10)
 
 
+ggsave("../plots/heatmap.correlation_sc_taps.pdf", p,width=10, height=10)
+ggsave("../plots/heatmap.correlation_sc_taps.png", p,width=10, height=10)
+
+
+
+selsmp <- qc[,1]
+cor_mat <- data.frame()
+for(i in selsmp){
+  for(j in "cd8_tcells_merge_CpG"){
+    temp1 <- fread(paste0("../meth/",i,".CpG.bin_100k.bed")) %>% as.data.frame()
+    temp1$ratio <- temp1[,4]/temp1[,5]
+    temp2 <- fread(paste0("../meth/",j,".bin_100k.bed")) %>% as.data.frame()
+    temp2$ratio <- temp2[,4]/temp2[,5]
+    colnames(temp1)[1:3] <- c("chr","start","end")
+    temp1 <- temp1[temp1[,5] <cov_max & temp1[,5]>cov_min,]
+    colnames(temp2)[1:3] <- c("chr","start","end")
+    temp2 <- temp2[temp2[,5] <cov_max & temp2[,5]>cov_min,]
+    temp <- merge(temp1,temp2, by=c("chr","start","end"))
+    cor_mat <- rbind(cor_mat,c(i,j,cor(temp[,c("ratio.x","ratio.y")])[2,1]))
+  }
+}
+write.table(cor_mat,"per_cell_100k.cor.mat",col.names = FALSE, quote=FALSE, row.names = FALSE)
 
 #### 3. heatmap in  selected regions ####
 # code in cluster
@@ -240,3 +274,80 @@ meth %>% t() %>%
   pheatmap::pheatmap(cluster_rows = FALSE, cluster_cols = FALSE, border_color = NA,
                      color=colorRampPalette(c("navy", "white", "red"))(50),
                      filename = "/gpfs3/well/ludwig/users/cfo155/scTAPS_CAPS/mESC_update/meth/chr12_3m_120m.png", width = 24,height = 12,show_rownames = FALSE)
+
+
+#### Methylation on genes ####
+setwd("/users/ludwig/cfo155/cfo155/scTAPS_CAPS/human_immune_cells/t_cell_update")
+pos <- read.table("resource/gencode.v43.annotation.all_gene.bed",header=FALSE)
+colnames(pos)[1:3] <- c("CHROM","START","END")
+
+genemeth <- read.table("meth/all_sample.CpG.gene.bed",header=TRUE,sep="\t")
+genemeth <- merge(pos[,c(1:3,4,5)],genemeth, by=c("CHROM","START","END"))
+rownames(genemeth) <- paste0(genemeth$V5,":",genemeth$V4)
+
+
+
+
+genemeth <- genemeth[,-c(1:5)]
+colnames(genemeth) <- gsub("_rev_","_",colnames(genemeth))
+genemeth <- genemeth[,!colnames(genemeth)%in%c(paste0(exclude_cells,"_MOD"),
+                                               paste0(exclude_cells,"_TOTAL"))]
+min_cov1 <- 10
+gene_aC <- genemeth %>% dplyr::select(grep("_TOTAL$",colnames(genemeth), value = TRUE))
+sel_genes <- rownames(gene_aC)[apply(gene_aC,1,min)>=min_cov1]
+length(sel_genes)
+
+
+mC1<- genemeth %>% dplyr::select(grep("_MOD$",colnames(genemeth), value = TRUE))
+aC1 <- genemeth %>% dplyr::select(grep("_TOTAL$",colnames(genemeth), value = TRUE))
+aC1[aC1 < min_cov1] <- NA
+
+meth1 <- mC1/aC1
+meth1$var <- apply(meth1,1,function(x){x[!is.na(x)] %>% var})
+meth1$n_na <- apply(meth1,1,function(x){sum(is.na(x))})
+dim(meth1[complete.cases(meth1),])
+
+write.table(meth1,"cd8_tcell_genebody_meth.txt",sep="\t",quote = FALSE,row.names = TRUE, col.names = TRUE)
+
+# CD8 T naive marker(TCF7, LEF1, PTPRC); CD8 Exhausted marker: (HAVCR2, TOX2, PRDM1)
+# ITGAE:|REG4:|OGN:
+# meth1[grep("TCF7:|LEF1:|PTPRC:|HAVCR2:|^TOX2:|PRDM1:|GAPDH:|ACTG1:|^ACTB:",rownames(meth1)),] 
+# seldat <- meth1[grep("TCF7:|LEF1:|PTPRC:|HAVCR2:|^TOX2:|PRDM1:|GAPDH:|ACTG1:|^ACTB:",rownames(meth1)),] %>% select(contains("MOD")) %>% t() %>%
+#   as.data.frame() %>% melt()
+# theme_set(theme_light(base_size = 18))
+# p <- plot_grid(ggplot(seldat[grep("TCF7:|LEF1:|PTPRC:",seldat$variable),], aes(x=variable,y=value)) + geom_boxplot() + geom_jitter(width = 0.2)+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#   ylab("genebody 5mCG in CD8 T cells") + xlab("naive CD8 T-cell") + ylim(0,1),
+#   ggplot(seldat[grep("HAVCR2:|^TOX2:|PRDM1:",seldat$variable),], aes(x=variable,y=value)) + geom_boxplot() + geom_jitter(width = 0.2)+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#     ylab("genebody 5mCG in CD8 T cells") + xlab("exhausted CD8 T-cell") + ylim(0,1),
+#   ggplot(seldat[grep("ACTG1:",seldat$variable),], aes(x=variable,y=value)) + geom_boxplot() + geom_jitter(width = 0.2)+theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+#     ylab("genebody 5mCG in CD8 T cells") + xlab("housekeeping gene") + ylim(0,1),
+#   nrow=1, rel_widths = c(1,1,0.5))
+
+
+seldat <- meth1[grep("MXD4:|CD47:|VEGFA:|ALKBH5:|TMED7:|EXOC4|ARHGAP15",rownames(meth1)),] %>% select(contains("MOD")) %>% t() %>%
+  as.data.frame() %>% melt()
+seldat$variable <- gsub(":.*","",seldat$variable)
+p1 <- plot_grid(ggplot(seldat[grep("MXD4|CD47|VEGFA|ALKBH5|TMED7",seldat$variable),], aes(x=variable,y=value)) + geom_boxplot() + geom_jitter(width = 0.2)+
+                 ylab("genebody 5mCG") + xlab("") + ylim(0,1),
+               ggplot(seldat[grep("EXOC4|ARHGAP15",seldat$variable),], aes(x=variable,y=value)) + geom_boxplot() + geom_jitter(width = 0.2)+
+                 ylab("genebody 5mCG") + xlab("") + ylim(0,1),
+               nrow=1, rel_widths = c(1,0.5))
+p1
+genelen <- read.table("resource/selgene_cpg_count.txt")
+sellen <- genelen[genelen$V5 %in% c("MXD4","CD47", "VEGFA","ALKBH5","TMED7","EXOC4","ARHGAP15"),]
+rownames(sellen) <- paste0(sellen$V5,":",sellen$V4)
+selaC <- aC1[grep("MXD4:|CD47:|VEGFA:|ALKBH5:|TMED7:|EXOC4|ARHGAP15",rownames(aC1)),] %>% select(contains("TOTAL")) %>%
+  merge(., sellen %>% select(V7),by=0) %>% melt(id=c("Row.names","V7")) 
+selaC$nor_cov <- selaC$value/selaC$V7
+selaC$id <- gsub("_N.*","",selaC$variable)
+selaC <- selaC[complete.cases(selaC),]
+selaC$gene <- gsub(":.*","",selaC$Row.names) %>% as.factor()
+p2 <- plot_grid(ggplot(selaC[grep("MXD4:|CD47:|VEGFA:|ALKBH5:|TMED7:",selaC$Row.names),], aes(x=gene,y=nor_cov)) + geom_boxplot() + geom_jitter(width = 0.2) +
+                 ylab("normalized coverage") + xlab("") + ylim(0,1),
+               ggplot(selaC[grep("EXOC4|ARHGAP15",selaC$Row.names),], aes(x=gene,y=nor_cov)) + geom_boxplot() + geom_jitter(width = 0.2) +
+                 ylab("normalized coverage") + xlab("") + ylim(0,1),
+               nrow=1, rel_widths = c(1,0.5))
+p2
+theme_set(theme_light(base_size = 18))
+p <- plot_grid(p1,p2,nrow=2)
+ggsave("cd8_tcell_genebody_meth_selgene.boxplot.pdf",p,width = 10, height = 8)

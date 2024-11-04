@@ -10,6 +10,7 @@ rawdata: /gpfs3/well/ludwig/users/cfo155/scTAPS_CAPS/mESC/rawdata/P230072
 
 run:
 module purge
+ml use -a /apps/eb/skylake/modules/all
 module load snakemake/5.26.1-foss-2019b-Python-3.7.4 
 snakemake --use-envmodules --max-status-checks-per-second 0.01 --snakefile code/sctaps.smk --cluster "sbatch -p short --mem-per-cpu 20G " -j 96 -np
 
@@ -53,6 +54,7 @@ rule all:
         expand("align/{sample}.spikeins.read.meth.txt.gz", sample = SAMPLES),
         expand("align/{sample}.spikeins.filter.meth.sta.txt.gz", sample = SAMPLES),
         expand("meth/{sample}.CpG.chrhmm.meth.txt", sample = SAMPLES),
+        expand("align/{sample}.genomecov.txt", sample=SAMPLES)
         #expand("meth/{sample}.CpG.meth.bed.gz", sample = SAMPLES),
         #expand("meth/{sample}.CpG.gene.bed", sample = SAMPLES),
         #expand("meth/{sample}.CpG.gene_2k.bed", sample = SAMPLES),
@@ -122,6 +124,21 @@ rule align_fastp:
         samtools sort -@ 8 -O BAM -T {params.tmp} >{output}) 1>{log} 2>&1
         """
 
+rule genome_cov: 
+    input:
+        "align/{sample}.md.bam"
+    output:
+        "align/{sample}.genomecov.txt"
+    params:
+        bedtools="BEDTools",
+        ref=REF
+    shell:
+        """
+        module purge
+        module load {params.bedtools}
+        bedtools genomecov -ibam {input} -bg|awk '$1~/chr/'|cut -f1-3|bedtools merge -i - |awk '{{sum+=$3-$2}}END{{print sum}}' >{output}
+        bedtools bamtobed -i {input} |bedtools genomecov -i - -g {params.ref}.fai -bg|awk '$1~/chr/'|cut -f1-3|bedtools merge -i -|awk '{{sum+=$3-$2}}END{{print sum}}' >>{output}
+        """
 
 ################################ GENOME #################################
 rule markdup: 

@@ -12,8 +12,10 @@ read length: 128 bp
 rawdata: /gpfs3/well/ludwig/users/cfo155/scTAPS_CAPS/mESC/rawdata/P230072
 
 run:
+module purge
+ml use -a /apps/eb/skylake/modules/all 
 module load snakemake/5.26.1-foss-2019b-Python-3.7.4 
-snakemake --use-envmodules --max-status-checks-per-second 0.01 --snakefile code/sccaps.smk --cluster "sbatch -p short " -j 384 -np
+snakemake --use-envmodules --max-status-checks-per-second 0.01 --snakefile code/sccaps.smk --cluster "sbatch -p short --mem-per-cpu 30G" -j 384 -np
 
 dir=/gpfs3/well/ludwig/users/cfo155/scTAPS_CAPS/mESC/rawdata/P230072/WTCHG_981766
 paste <(ls ${dir}/*gz) <(ls ${dir}/*gz|sed 's/WTCHG_981766/WTCHG_981767/g') <(ls ${dir}/*gz|awk -F'/' '{print $NF}'|sed 's,^,>fastq/,g;s/[ATCG+]*_R//g')|sed 's/^/cat /g;' >P230072_rename_fastq.sh
@@ -50,6 +52,7 @@ wget -c https://hgdownload.soe.ucsc.edu/goldenPath/mm9/database/refGene.txt.gz
 wget -c https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M1/gencode.vM1.annotation.gtf.gz
 zcat gencode.vM1.annotation.gtf.gz |awk -F "\t" '$3=="gene" && $9~/protein_coding/'|bedtools slop -i - -g caps_mm9_lambda.fa.fai -l 2000 -r 2000 |awk 'BEGIN{OFS="\t"}{print $1,$4-1,$5,$10,$18,$7}' | tr -d '";'  >gencode.vM1.annotation.protein_coding_slope2k.bed
 bedtools makewindows -g <(cut -f1,2 caps_mm9_lambda.fa.fai|grep -wP chr[0-9,X,Y]* ) -w 100000 >genome_bin100k.bed
+bedtools makewindows -g <(cut -f1,2 caps_mm9_lambda.fa.fai|grep -wP chr[0-9,X,Y]* ) -w 1000000 >genome_bin1m.bed
 zcat gencode.vM1.annotation.gtf.gz |awk -F "\t" '$3=="gene" && $9~/protein_coding/' |awk 'BEGIN{OFS="\t"}{print $1,$4-1,$5,$10,$18,$7}' | tr -d '";'  >gencode.vM1.annotation.protein_coding.bed
 
 
@@ -70,6 +73,10 @@ for i in `ls *CpG.bedGraph`
 do
     echo $i `cat $i |grep chr|awk '{mC+=$6;aC+=$5+$6}END{print mC/aC,mC,aC}'` `cat ${i/_CpG.bedGraph/}_CHG.bedGraph |grep chr|awk '{mC+=$6;aC+=$5+$6}END{print mC/aC,mC,aC}'` `cat ${i/_CpG.bedGraph/}_CHH.bedGraph |grep chr|awk '{mC+=$6;aC+=$5+$6}END{print mC/aC,mC,aC}'`
 done > meth.sta.txt
+
+
+for i in `ls *snp.txt.sta`;do echo $i `cat $i |tail -n +2|tr '\n' '\t'`;done >all_sample.CpG.sta
+for i in `ls *snp.txt.spikein.sta`;do echo $i `cat $i |tail -n +2|tr '\n' '\t'`;done >all_sample.CpG.spikein.sta
 """
 
 
@@ -78,25 +85,32 @@ min_version("5.26")
 
 configfile: "code/configure.yaml"
 
-SAMPLES = config["SCCAPS_SMPS"] #"test" #
+SAMPLES = config["SCCAPS_SMPS"]#"C206_N702_i7_2_rev_N504_i5_3_rev" #
 REF = config["SCTAPS_SMPS_REF"]
 print(SAMPLES)
 
 rule all:
     input:
-        expand("fastq/{sample}_{readDirection}_fastqc.html",sample = SAMPLES, readDirection=['1','2']),
-        expand("align/{sample}.bwa.bam", sample = SAMPLES),
-        expand("stats/{sample}.mapping.txt", sample = SAMPLES),
-        expand("align/{sample}.md.read.meth.txt.gz", sample=SAMPLES),
-        expand("align/{sample}.md.filter.meth.sta.txt.gz", sample = SAMPLES),
-        expand("align/{sample}.spikeins.bam", sample = SAMPLES),
-        expand("align/{sample}.spikeins.read.meth.txt.gz", sample = SAMPLES),
-        expand("align/{sample}.spikeins.filter.meth.sta.txt.gz", sample = SAMPLES),
-        expand("meth/{sample}.CpG.meth.bed.gz", sample = SAMPLES),
-        expand("meth/{sample}_CpG.bedGraph", sample=SAMPLES),
-        expand("meth/{sample}.144hmC_CHH.bedGraph", sample=SAMPLES),
-        #expand("meth/{sample}.CpG.gene.bed", sample=SAMPLES),
-        expand("meth/{sample}.CpG.100k.bed", sample = SAMPLES)
+        # expand("fastq/{sample}_{readDirection}_fastqc.html",sample = SAMPLES, readDirection=['1','2']),
+        # expand("align/{sample}.bwa.bam", sample = SAMPLES),
+        # expand("align/{sample}.md.bam", sample = SAMPLES),
+        # expand("stats/{sample}.mapping.txt", sample = SAMPLES),
+        # expand("align/{sample}.md.read.meth.txt.gz", sample=SAMPLES),
+        # expand("align/{sample}.md.filter.meth.sta.txt.gz", sample = SAMPLES),
+        # expand("align/{sample}.spikeins.bam", sample = SAMPLES),
+        # expand("align/{sample}.spikeins.read.meth.txt.gz", sample = SAMPLES),
+        # expand("align/{sample}.spikeins.filter.meth.sta.txt.gz", sample = SAMPLES),
+        # expand("meth/{sample}.CpG.meth.bed.gz", sample = SAMPLES),
+        expand("meth/{sample}.cytosine_report.txt", sample=SAMPLES),
+        expand("meth/{sample}.cytosine_report.snp.txt.gz", sample=SAMPLES),
+        expand("meth/{sample}.cytosine_report.sta.txt", sample=SAMPLES),
+        expand("bam/{sample}.md.clipoverlap.bam", sample=SAMPLES),
+        expand("align/{sample}.c.snp.txt.gz", sample=SAMPLES),
+        expand("meth/{sample}.cytosine_report.snp.txt.sta", sample=SAMPLES),
+        expand("meth/{sample}.cytosine_report.snp.txt.spikein.sta", sample=SAMPLES)
+        # expand("meth/{sample}.144hmC_CHH.bedGraph", sample=SAMPLES),
+        # expand("meth/{sample}.CpG.gene.bed", sample=SAMPLES),
+        # expand("meth/{sample}.CpG.100k.bed", sample = SAMPLES)
 
 
 
@@ -240,9 +254,9 @@ rule extract_meth:
 
 rule call_meth: 
     input:
-        bam="align/{sample}.md.bam"
+        "bam/{sample}.md.bam"
     output:
-        "meth/{sample}_CpG.bedGraph"
+        "meth/{sample}.cytosine_report.txt"
     log:
         "logs/{sample}_methcall.log"
     params:
@@ -253,26 +267,95 @@ rule call_meth:
     shell:
         """
         (
-        module load {params.samtools} 
-        samtools index {input.bam}
-        {params.methydackel} extract {params.ref} {input.bam} -o {params.prefix} -p 13 \
-            --OT 10,118,10,118 --OB 10,118,10,118 --CHG --CHH 
-        ) 1>{log} 2>&1
+        {params.methydackel} extract {params.ref} {input} -o {params.prefix} -p 13 \
+            --OT 10,118,10,118 --OB 10,118,10,118 --cytosine_report --CHG --CHH 
         module purge
+        ) 1>{log} 2>&1
         """
 
-rule meth_trim: 
+rule call_meth_sta: 
     input:
-        "align/{sample}.md.read.meth.txt.gz"
+         "meth/{sample}.cytosine_report.txt"
     output:
-        "align/{sample}.md.filter.meth.sta.txt.gz"
+        "meth/{sample}.cytosine_report.sta.txt"
+    shell:
+        """
+        grep chr {input} |awk '{{mC[$6]+=$5;uC[$6]+=$4}}END{{for(i in uC)print i,mC[i],uC[i],mC[i]/(mC[i]+uC[i])}}' >{output}
+        """
+
+rule bam_clipoverlap: 
+    input:
+        "bam/{sample}.md.bam"
+    output:
+        "bam/{sample}.md.clipoverlap.bam"
+    shell:
+        """
+        /users/ludwig/cfo155/cfo155/conda_tools/bin/bam clipOverlap --in {input} --out {output} --poolSize 100000000
+        """
+
+rule cg_snp: 
+    input:
+        "bam/{sample}.md.clipoverlap.bam"
+    output:
+        "align/{sample}.c.snp.txt.gz"
     params:
-        python=config["python"]
+        bcftools="BCFtools",
+        ref=REF
     shell:
         """
         module purge
-        module load {params.python}
-        python3 code/nd_taps_convert_call.py -r {input} -s 10 -e 118 -c True
+        module load {params.bcftools}
+        bcftools mpileup -f {params.ref} {input} -a AD|\
+            awk '$4=="C"||$4=="G"'|\
+            awk 'BEGIN{{OFS="\\t";FS="\\t"}}{{gsub(".*:","",$10);split($10, arr, ",");sum = 0;for (i in arr) sum += arr[i]; print $1,$2,$4,$5,$10,arr[1],sum}}'|gzip - >{output}
+        """
+
+rule snp_meth: 
+    input:
+        snp="align/{sample}.c.snp.txt.gz",
+        meth="meth/{sample}.cytosine_report.txt"
+    output:
+        "meth/{sample}.cytosine_report.snp.txt.gz"
+    shell:
+        """
+        join -1 1 <(awk 'BEGIN{{OFS="\\t"}}{{print $1"_"$2,$0}}' {input.meth}|sort -k1,1) \
+             -2 1 <(zcat {input.snp}|awk 'BEGIN{{OFS="\\t"}}{{print $1"_"$2,$0}}' |sort -k1,1) -a1 -t$'\\t'|gzip - >{output}
+        """
+
+rule snp_meth_sta:
+    input:
+        "meth/{sample}.cytosine_report.snp.txt.gz"
+    output:
+        "meth/{sample}.cytosine_report.snp.txt.sta"
+    log:
+        "{sample}.log"
+    shell:
+        """
+        (
+        echo -e "context\\tmpileup_mC\\tmpileup_aC\\tmpileup_rC\\tmethydackel_mC\\tmethydackel_aC\\tmethydackel_rC" >{output}
+        zcat {input}| awk '$9~/chr/'| awk '$12=="<*>"||($11=="C"&&$12=="T,<*>")||($11=="G"&&$12=="A,<*>")'|\
+            awk 'BEGIN{{FS="\\t";OFS="\\t"}}{{uC1[$7]+=$14;aC1[$7]+=$15;uC2[$7]+=$5;aC2[$7]+=$6+$5}}END{{for(i in uC1)print i,uC1[i],aC1[i],1-uC1[i]/aC1[i],uC2[i],aC2[i],1-uC2[i]/aC2[i]}}' >> {output} 
+        ) >{log} 2>&1
+        """
+
+rule snp_meth_sta_spikein:
+    input:
+        "meth/{sample}.cytosine_report.snp.txt.gz"
+    output:
+        "meth/{sample}.cytosine_report.snp.txt.spikein.sta"
+    log:
+        "{sample}.log"
+    shell:
+        """
+        (
+        echo -e "context\\tmpileup_mC\\tmpileup_aC\\tmpileup_rC\\tmethydackel_mC\\tmethydackel_aC\\tmethydackel_rC" >{output}
+        zcat {input}| awk '$9~/144hmC/&&($10=="87"||$10=="92"||$10=="100"||$10=="110"||$10=="117")'|\
+            awk 'BEGIN{{FS="\\t";OFS="\\t"}}{{uC1[$7]+=$14;aC1[$7]+=$15;uC2[$7]+=$5;aC2[$7]+=$6+$5}}END{{for(i in uC1)print "144hmC:"i,uC1[i],aC1[i],1-uC1[i]/aC1[i],uC2[i],aC2[i],1-uC2[i]/aC2[i]}}' >> {output} 
+        zcat {input}| awk '$9~/J02459.1/'| awk '$12=="<*>"||($11=="C"&&$12=="T,<*>")||($11=="G"&&$12=="A,<*>")'|\
+            awk 'BEGIN{{FS="\\t";OFS="\\t"}}{{uC1[$7]+=$14;aC1[$7]+=$15;uC2[$7]+=$5;aC2[$7]+=$6+$5}}END{{for(i in uC1)print "J02459.1:"i,uC1[i],aC1[i],1-uC1[i]/aC1[i],uC2[i],aC2[i],1-uC2[i]/aC2[i]}}' >> {output} 
+        zcat {input}| awk '$9~/unmodified_2kb/'| awk '$12=="<*>"||($11=="C"&&$12=="T,<*>")||($11=="G"&&$12=="A,<*>")'|\
+            awk 'BEGIN{{FS="\\t";OFS="\\t"}}{{uC1[$7]+=$14;aC1[$7]+=$15;uC2[$7]+=$5;aC2[$7]+=$6+$5}}END{{for(i in uC1)print "unmodified_2kb:"i,uC1[i],aC1[i],1-uC1[i]/aC1[i],uC2[i],aC2[i],1-uC2[i]/aC2[i]}}' >> {output} 
+        ) >{log} 2>&1
         """
 
 rule cpg_filter:
