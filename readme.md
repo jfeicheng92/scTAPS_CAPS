@@ -27,6 +27,19 @@ Xiufei Chen<sup>1,2,3,10</sup>, Jingfei Cheng<sup>2,3,10</sup>, Linzhen Kong<sup
 
 
 ## data preprocessing
+preprocess/mESC/configure.yaml
+preprocess/mESC/lowinput_analysis.smk
+preprocess/mESC/mESC_sccaps.smk
 
+preprocess/t_cell/configure.yaml
+preprocess/t_cell/sctaps.smk
+preprocess/t_cell/standard_taps.smk
+
+preprocess/mouse_hippocampus/configure.yaml
+preprocess/mouse_hippocampus/nd_taps_convert_call.py
+preprocess/mouse_hippocampus/nd_taps_extract_parallel.py
+preprocess/mouse_hippocampus/sccaps.smk
 
 ## Code for figures
+figs/fig1_cd8t_cell.r  
+figs/fig2_mouse_hippocampus.r
