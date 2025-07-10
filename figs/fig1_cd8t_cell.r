@@ -220,7 +220,7 @@ res_wide %>%
                      filename = "plots/chr2_80000000_87000000.2.pdf", width = 24,height = 12,show_rownames = FALSE)
 
 
-#### 4. methylation in chrhmm ####
+#### 4. methylation in chrhmm (figS5b)####
 dat <- read.table("all_state.meth.txt",col.names = c("smp","V1","mC","aC","rC"))
 dat$V1 <- gsub("GapArtf", "assembly gaps and alignment artifacts", dat$V1)
 dat$V1 <- gsub("HET", "heterochromatin", dat$V1)

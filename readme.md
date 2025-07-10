@@ -1,7 +1,7 @@
-# Direct, bisulfite-free 5-methylcytosine and 5-hydroxymethylcytosine sequencing at single-cell resolution 
+# Direct and bisulfite-free 5-methylcytosine and 5-hydroxymethylcytosine sequencing at single-cell resolution with scTAPS and scCAPS+ 
 
 
-Xiufei Chen<sup>1,2,3,10</sup>, Jingfei Cheng<sup>2,3,10</sup>, Linzhen Kong<sup>2,3,10</sup>, Xiao Shu<sup>2,3</sup>, Haiqi Xu<sup>2,3</sup>, Masato Inoue<sup>2,3</sup>, Marion Silvana Fernández Berroca<sup>l4</sup>, Dagny Sanden Døskeland<sup>4</sup>, Magnar Bjørås<sup>4,5,6</sup>, Shivan Sivakumar<sup>7,8</sup>, Yibin Liu<sup>9,*</sup>, Jing Ye<sup>4,*</sup>, Chun-Xiao Song<sup>2,3,*</sup> 
+Xiufei Chen<sup>1,2,3,10</sup>, Jingfei Cheng<sup>2,3,10</sup>, Linzhen Kong<sup>2,3,10</sup>, Xiao Shu<sup>2,3</sup>, Haiqi Xu<sup>2,3</sup>, Masato Inoue<sup>2,3</sup>, Marion Silvana Fernández Berroca<sup>l4</sup>, Dagny Sanden Døskeland<sup>4</sup>, Magnar Bjørås<sup>4,5,6</sup>, Shivan Sivakumar<sup>7,8</sup>, Yibin Liu<sup>9,* </sup>, Jing Ye<sup>4,* </sup>, Chun-Xiao Song<sup>2,3,* </sup> 
 
 <sup>1</sup> Department of Central Laboratory, The First Affiliated Hospital of Ningbo University, Ningbo 315010, China 
 
@@ -41,5 +41,21 @@ preprocess/mouse_hippocampus/nd_taps_extract_parallel.py
 preprocess/mouse_hippocampus/sccaps.smk    
 
 ## Code for figures
-figs/fig1_cd8t_cell.r    
-figs/fig2_mouse_hippocampus.r  
+Fig1:
+figs/fig1_cd8t_cell_analysis.sh # Bash script to generate input data for plotting
+figs/fig1_cd8t_cell.r   # R script to generate the figure
+Fig2:
+figs/fig2_mouse_hippocampus_analysis.sh # Bash script to generate input data for plotting
+figs/fig2_mouse_hippocampus.r # R script to generate the figure
+FigS1:
+figs/lowinput_archive.r
+FigS3:
+figs/revision.r
+FigS4:
+figs/sc_archive.r
+figs/revision.r
+FigS5:
+figs/figure2.r
+figs/fig1_cd8t_cell.r
+FigS7:
+figs/fig2_mouse_hippocampus.r

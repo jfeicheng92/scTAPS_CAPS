@@ -10,7 +10,7 @@ library(viridis)
 options(bitmapType='cairo-png')
 setwd("/users/ludwig/cfo155/cfo155/scTAPS_CAPS/mouse_neuron_update")
 mycolors <- c("#7994C6","#e01a30","#039fcc","#7d2574")
-#### 4a. genome methylation ####
+#### genome methylation (Fig2a) ####
 qc <- read.csv("stats/all_stats.info",header=TRUE)
 exclude_cells <- qc[qc$proper_nmap<500000|qc$proper_nmap>3000000,1] # exclude sample by abnormal proper_nmap reads
 qc$lib <- gsub("_N.*","",qc$smp)
@@ -47,7 +47,7 @@ p <- qc[!qc$smp%in%exclude_cells,] %>%
                    labels=c('NeuN-','NeuN- aged','NeuN+','NeuN+ aged'))
 ggsave(p, width =5, height = 3, filename = "plots/chr_sta.pdf")
 ggsave(p, width =5, height = 3, filename = "plots/chr_sta.png")
-#### 4b. clustering based on gene methylation ####
+#### clustering based on gene methylation ####
 pos <- read.table("resource/gencode.vM1.annotation.protein_coding.bed",header=FALSE)
 pos$id <- gsub("\\..*","",pos$V4)
 colnames(pos)[1:3] <- c("CHROM","START","END")
@@ -116,7 +116,7 @@ obj$orig.ident <- gsub("C206","NeuN- aged",obj$orig.ident)
 obj$orig.ident <- gsub("C213","NeuN+",obj$orig.ident)
 obj$orig.ident <- gsub("C211","NeuN+ aged",obj$orig.ident)
 
-###### 1.1 cluster ###### 
+###### 1.1 cluster (Fig2b) ###### 
 obj <- NormalizeData(obj)#, normalization.method = "RC")
 obj <- FindVariableFeatures(obj)
 all.genes <- rownames(obj)
@@ -158,7 +158,7 @@ if (websiteLive) {
   enriched_mark2 <- enrichr(mark2, dbs)
 }
 
-###### 1.2.1 enrich tabula_Muris ###### 
+###### 1.2.1 enrich tabula_Muris (Fig2c) ###### 
 sel_n <- 1
 enrich_term <- rbind(head(enriched_mark1$Tabula_Muris,sel_n),
       head(enriched_mark2$Tabula_Muris,sel_n))
@@ -176,7 +176,7 @@ p <- enrich_term %>%
 ggsave(paste0("plots/",cmp,"_top1_onotology.pdf"),p,width = 10,height = 2.5)
 ggsave(paste0("plots/",cmp,"_top1_onotology.png"),p,width = 10,height = 2.5)
 
-###### 1.2.2 enrich go ###### 
+###### 1.2.2 enrich go (Fig2d-e)###### 
 sel_n <- 10
 enrich_term <- head(enriched_mark1$GO_Biological_Process_2023,sel_n)
 enrich_term$termshort <- gsub("\\(.*\\)","",enrich_term$Term)
@@ -270,7 +270,7 @@ sapply(names(enriched_mark1),
 sapply(names(enriched_mark2), 
        function (x) write.csv(enriched_mark2[[x]], file=paste("plots/",cmp,"_", x, ".non_NeuN.csv", sep=""),quote = FALSE))
 
-###### 1.2.3 plot marker genes #####
+###### 1.2.3 plot marker genes (Fig2f-g, FigS7c) #####
 # Cnksr3|SEMA4D|TNR|DOCK5|MOB3B
 # RBFOX3|CNTNAP2|celf4|grm1|syt1
 marker_1 <- grep("Cnksr3|SEMA4D|DOCK5|MOB3B",rownames(cluster.markers),ignore.case = TRUE,value=TRUE)
@@ -324,7 +324,7 @@ cluster.markers <- FindMarkers(obj, ident.1 = c(0), ident.2 = c(1), min.pct = 0.
 cluster.markers$name <- gsub(":.*","",rownames(cluster.markers))
 write.csv(cluster.markers,paste0("plots/",cmp,"_markers.csv"),quote = FALSE)
 
-###### 2.2.1 relate with age markers #####
+###### 2.2.1 relate with age markers (FigS7e) #####
 age_gene <- read.table("resource/age_correlated_gene_2023_cell.txt",header=TRUE,sep="\t") ## from Age-correlated-genes: https://www.cell.com/cms/10.1016/j.cell.2023.07.027/attachment/90a87e6e-bc57-4ee7-a2a4-1871cd10a544/mmc1.xlsx
 
 # avg_log2FC < 0, Higher in Aged
@@ -364,18 +364,12 @@ ggsave(paste0("plots/",cmp,"_correlation_with_ageing_gene_expr.pdf"),p,width = 6
 ggsave(paste0("plots/",cmp,"_correlation_with_ageing_gene_expr.png"),p,width = 6,height = 6)
 
 
-marker_1 <- grep("Trim2|grip1|oxr1|hcn1|aldh1l1|foxo3|megf10|camk4|tox2|shank2|runx1|app",rownames(cluster.markers),ignore.case = TRUE,value=TRUE)
+###### 2.2.2 markers (FigS7d,f)#####
+marker_1 <- grep("Gpr39|Acvr1|Trdn|Eps8|Nfasc|Chsy3|Zbtb40|Pcbp3|Atg10|Kcnk2|lkzf2|Tusc3|Nfasc|Acvr1|Eps8|Nfasc|Hpca|Aldh1l1|Parn|Galntl6|Trdn",rownames(cluster.markers),ignore.case = TRUE,value=TRUE)
 p1 <- FeaturePlot(obj, features = marker_1,
                   reduction = "tsne",ncol=4, pt.size = 0.5) & scale_color_gradientn(colors = rev(brewer.pal(11 ,"RdBu")))
 ggsave(paste0("plots/",cmp,"_markers.png"),p1,width = 15,height = 10)
 ggsave(paste0("plots/",cmp,"_markers.pdf"),p1,width = 15,height = 10)
-
-###### 2.2.2 markers #####
-marker_1 <- grep("Tcf4|App|Syt1|kcnip4|cdon|cntn4|prkca|nrg2|hdac9|usp7",rownames(cluster.markers),ignore.case = TRUE,value=TRUE)
-p1 <- FeaturePlot(obj, features = marker_1,
-                  reduction = "tsne",ncol=4, pt.size = 0.5) & scale_color_gradientn(colors = rev(brewer.pal(11 ,"RdBu")))
-ggsave(paste0("plots/",cmp,"_markers.png"),p1,width = 15,height = 7.5)
-ggsave(paste0("plots/",cmp,"_markers.pdf"),p1,width = 15,height = 7.5)
 
 
 ##### 3. Aging non neuron #####
@@ -420,7 +414,7 @@ cluster.markers$name <- gsub(":.*","",rownames(cluster.markers))
 write.csv(cluster.markers,paste0("plots/",cmp,"_markers.csv"),quote = FALSE)
 
 
-###### 3.2.1 relate with age markers #####
+###### 3.2.1 relate with age markers (Fig2j) #####
 age_gene <- read.table("resource/age_correlated_gene_2023_cell.txt",header=TRUE,sep="\t")
 
 # avg_log2FC < 0, Higher in Aged
@@ -468,8 +462,8 @@ geom_text(hjust=0, vjust=0)
 ggsave(paste0("plots/",cmp,"_correlation_with_ageing_gene_expr.label.pdf"),p,width = 10,height = 10)
 ggsave(paste0("plots/",cmp,"_correlation_with_ageing_gene_expr.label.png"),p,width = 10,height = 10)
 
-###### 3.2.2 markers #####
-marker_1 <- grep("Trim2|grip1|oxr1|hcn1|foxo3|megf10|camk4|tox2|shank2|runx1|app|Args|Edil3|Epha3",rownames(cluster.markers),ignore.case = TRUE,value=TRUE)
+###### 3.2.2 markers ((Fig2i, FigS7f)#####
+marker_1 <- grep("foxo3|megf10|camk4|tox2|shank2|runx1|app|Args|Edil3|Epha3|Klhl1|Nbas|Prr5l|Srrm4",rownames(cluster.markers),ignore.case = TRUE,value=TRUE)
 p1 <- FeaturePlot(obj, features = marker_1,
                   reduction = "tsne",ncol=4, pt.size = 0.5) & scale_color_gradientn(colors = rev(brewer.pal(11 ,"RdBu")))
 ggsave(paste0("plots/",cmp,"_markers.png"),p1,width = 15,height = 10)
@@ -939,3 +933,117 @@ for(selgene in grep("Sipa1l1|Slc9a9|Jazf1|Pip5k1b|Galntl6|Atg10|Eps8|Acvr1:",row
 p <- grid.arrange(grobs = plots_list, nrow = 2)
 ggsave("stable_dynamic_aging_neuron.pdf",p, width = 18, height = 6)
 
+
+
+library(scales)
+library(Seurat)
+library(cowplot)
+library(pheatmap)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(ggsci)
+library(viridis)
+library(data.table)
+library(tidyr)
+library(corrplot)
+setwd("/gpfs3/well/ludwig/users/cfo155/scTAPS_CAPS/mouse_neuron_update")
+mycolors <- rev(c("#7994C6","#e01a30","#039fcc","#7d2574"))
+##### plot QC FigS7a ####
+qc <- read.csv("stats/all_stats.info",header=TRUE)
+exclude_cells <- qc[qc$proper_nmap<500000|qc$proper_nmap>3000000,1] # exclude sample by abnormal proper_nmap reads
+qc$lib <- gsub("_N.*","",qc$smp)
+qc$lib <- gsub("_N.*","",qc$smp)
+
+qc$lib <- factor(qc$lib,levels=rev(c("C211","C213","C206","C204")))
+qc <- qc[order(qc$lib),]
+qc$pct_q10_nmap <- qc$q10_nmap/qc$nclean
+qc$pct_chr_nC <- qc$chr_nC/21342780
+qc$per_base <- qc$chr_aC/qc$chr_nC
+theme_set(theme_light(base_size = 18))
+
+
+p1 <- qc %>%
+  ggplot(aes(x = lib, y = pct_q10_nmap*100, fill = lib)) +
+  geom_violin() +
+  geom_jitter(size=0.5, width = 0.1) +
+  stat_summary(geom="text", fun=mean,
+               aes(label=sprintf("%1.2f", ..y..)),
+               position=position_nudge(y=2), size=3.5)+
+  theme_bw() +
+  ylab("q10 mapping rate%") +
+  xlab("lib")+
+  theme(legend.position="None") + scale_fill_manual(values=mycolors)+scale_y_continuous(limits=c(0,100),expand = c(0, 0)) +
+  scale_color_manual(values=mycolors)+
+  scale_x_discrete(breaks=c("C204","C206","C213","C211"), 
+                   labels=c('NeuN-','NeuN- aged','NeuN+','NeuN+ aged'))
+p2 <- qc %>%
+  ggplot(aes(x = lib, y = pct_chr_nC*100, fill = lib)) +
+  geom_violin() +
+  geom_jitter(size=0.5, width = 0.1) +
+  stat_summary(geom="text", fun=mean,
+               aes(label=sprintf("%1.2f", ..y..)),
+               position=position_nudge(y=8), size=3.5)+
+  theme_bw() +
+  ylab("genomic CpG coverage%") +
+  xlab("lib")+
+  theme(legend.position="None") +
+  scale_fill_manual(values=mycolors)+scale_y_continuous(limits=c(0,25),expand = c(0, 0))+
+  scale_color_manual(values=mycolors)+
+  scale_x_discrete(breaks=c("C204","C206","C213","C211"), 
+                   labels=c('NeuN-','NeuN- aged','NeuN+','NeuN+ aged'))
+
+p3 <- qc %>%
+  ggplot(aes(x=lib,y=chr_rC,fill=lib))+ geom_violin() +
+  geom_jitter(size=0.5, width = 0.1) +
+  stat_summary(geom="text", fun=mean,
+               aes(label=sprintf("%1.2f", ..y..)),
+               position=position_nudge(y=0.1), size=3.5)+
+  theme_bw() +
+  ylab("genome methylation") +
+  xlab("lib")+
+  theme(legend.position="None") +
+  scale_fill_manual(values=mycolors)+scale_y_continuous(limits=c(0,100),expand = c(0, 0))+
+  scale_color_manual(values=mycolors)+
+  scale_x_discrete(breaks=c("C204","C206","C213","C211"), 
+                   labels=c('NeuN-','NeuN- aged','NeuN+','NeuN+ aged'))
+p <- plot_grid(p1,p2,p3, labels = c('A', 'B','C'), ncol=3,label_size = 8)
+ggsave(p, width =10, height = 4,filename = "plots/qc_sta.pdf")
+
+##### plot spikein FigS7b #####
+qc[grep("i7_12.*i5_8",qc$smp),]
+spikeins <- qc %>%
+  select(lib, hmC_mC, hmC_aC, lambda_mC, lambda_aC, unmeth2kb_mC, unmeth2kb_aC) %>%
+  group_by(lib) %>%
+  summarise_all(sum)
+spikeins$hmC_rC <- spikeins$hmC_mC/spikeins$hmC_aC
+spikeins$lambda_rC <- spikeins$lambda_mC/spikeins$lambda_aC
+spikeins$unmeth2kb_rC <- spikeins$unmeth2kb_mC/spikeins$unmeth2kb_aC
+conversion <- spikeins %>% 
+  select(contains(c("lib","rC"))) %>% 
+  pivot_longer(cols=ends_with("rC"))
+
+
+p <- conversion %>%
+  ggplot(aes(x=name,y=value*100,fill=lib))+ 
+  geom_bar(stat="identity",position = "dodge") +
+  geom_text(
+    aes(label = sprintf("%1.2f", value*100)),
+    position = position_dodge(width = 1),
+    vjust = -0.5, size = 3,   # Adjusted size for better visibility
+    color = "black"           # Added text color specification
+  )+
+  theme_bw() +
+  ylab("modification level%") +
+  xlab("")+
+  scale_y_continuous(limits=c(-1,100),expand = c(0, 0))+
+  scale_fill_manual(
+    breaks = c("C204", "C206", "C213", "C211"),
+    labels = c('NeuN-', 'NeuN- aged', 'NeuN+', 'NeuN+ aged'),
+    values = mycolors
+  )+
+  scale_x_discrete(
+  breaks = c("hmC_rC", "lambda_rC", "unmeth2kb_rC"),
+  labels = c('hmC', 'mC', 'uC')
+)
+ggsave("plots/conversion.pdf", p, width=7,height=4)
